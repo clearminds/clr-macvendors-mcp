@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "macvendors-mcp-server"
+name = "clr-macvendors-mcp"
 version = "1.0.0"
 description = "An MCP server for MAC address vendor lookups"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/clearminds/macvendors-mcp-server"
+Repository = "https://github.com/clearminds/clr-macvendors-mcp"
 
 [project.scripts]
-macvendors-mcp-server = "macvendors_mcp_server.server:main"
+clr-macvendors-mcp = "clr_macvendors_mcp.server:main"
