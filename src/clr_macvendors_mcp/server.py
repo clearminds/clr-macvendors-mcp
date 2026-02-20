@@ -44,14 +44,16 @@ def macvendors_lookup(mac: str) -> dict[str, str]:
     Uses the macvendors.com API to identify the OUI (Organizationally Unique
     Identifier) from the first 3 octets of the MAC address.
 
+    Note: Randomized MACs (Apple Private Wi-Fi Address, Android) won't
+    resolve to a real vendor.
+
     Args:
         mac: MAC address in any format (e.g. "d4:57:63:72:1e:00",
              "D4-57-63-72-1E-00", "d457.6372.1e00", or just OUI "d4:57:63").
 
-    Returns dict with mac, vendor, and found status.
-
-    Note: Randomized MACs (Apple Private Wi-Fi Address, Android) won't
-    resolve to a real vendor.
+    Returns:
+        A dictionary with ``mac``, ``vendor``, and ``found`` keys.
+        May also include an ``error`` key if rate-limited.
     """
     normalized = _normalize_mac(mac)
     resp = _rate_limited_get(f"{API_BASE}/{normalized}")
@@ -81,7 +83,9 @@ def macvendors_bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
     Args:
         macs: List of MAC addresses in any format.
 
-    Returns a list of results, each with mac, vendor, and found status.
+    Returns:
+        A list of dictionaries, each with ``mac``, ``vendor``, and
+        ``found`` keys. May also include an ``error`` key if rate-limited.
     """
     results = []
     for mac in macs:
