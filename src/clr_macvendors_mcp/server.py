@@ -16,6 +16,8 @@ mcp = FastMCP("MAC Vendors")
 _http: httpx.Client | None = None
 _last_request: float = 0.0
 
+WRITE_TOOLS: list[str] = []
+
 
 def _rate_limited_get(url: str) -> httpx.Response:
     """GET with 1 req/sec rate limiting for macvendors.com free tier."""
@@ -128,6 +130,12 @@ def main() -> None:
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
     )
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        default=None,
+        help="Run in read-only mode (hide write tools)",
+    )
     args = parser.parse_args()
 
     logging.config.dictConfig(
@@ -154,6 +162,11 @@ def main() -> None:
     logger.info("Starting MAC Vendors MCP Server")
 
     _http = httpx.Client(timeout=10.0)
+
+    if args.read_only and WRITE_TOOLS:
+        for name in WRITE_TOOLS:
+            mcp.remove_tool(name)
+        logger.info("Read-only mode: %d write tools removed", len(WRITE_TOOLS))
 
     try:
         if args.transport == "stdio":
