@@ -212,13 +212,13 @@ def search_by_brand(brand: str, limit: int = 500) -> list[dict]:
         conn.close()
 
 
-def list_brands(query: str | None = None) -> list[dict]:
+def list_brands(query: str | None = None, limit: int = 200) -> list[dict]:
     """List organizations in the OUI database, grouped with prefix counts.
 
     Args:
         query: Optional substring filter (case-insensitive ``LIKE``).
-            If ``None``, returns the top 100 organizations by prefix
-            count.
+            If ``None``, returns the top organizations by prefix count.
+        limit: Maximum number of organizations to return (default 200).
 
     Returns:
         A list of dicts, each with keys ``organization``, ``country``,
@@ -233,8 +233,9 @@ def list_brands(query: str | None = None) -> list[dict]:
                 "SELECT organization, country, COUNT(*) AS prefix_count "
                 "FROM oui WHERE organization LIKE ? COLLATE NOCASE "
                 "GROUP BY organization "
-                "ORDER BY prefix_count DESC",
-                (f"%{query}%",),
+                "ORDER BY prefix_count DESC "
+                "LIMIT ?",
+                (f"%{query}%", limit),
             )
         else:
             cursor = conn.execute(
@@ -242,7 +243,8 @@ def list_brands(query: str | None = None) -> list[dict]:
                 "FROM oui "
                 "GROUP BY organization "
                 "ORDER BY prefix_count DESC "
-                "LIMIT 100",
+                "LIMIT ?",
+                (limit,),
             )
         return [dict(row) for row in cursor.fetchall()]
     finally:

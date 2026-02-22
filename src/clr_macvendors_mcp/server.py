@@ -3,6 +3,7 @@
 import argparse
 import logging
 import logging.config
+import os
 import re
 import sys
 import time
@@ -233,7 +234,8 @@ def main() -> None:
 
     _http = httpx.Client(timeout=10.0)
 
-    if args.read_only and WRITE_TOOLS:
+    read_only = args.read_only or os.environ.get("MACVENDORS_READ_ONLY", "").lower() in ("1", "true", "yes")
+    if read_only and WRITE_TOOLS:
         for name in WRITE_TOOLS:
             mcp.remove_tool(name)
         logger.info("Read-only mode: %d write tools removed", len(WRITE_TOOLS))
