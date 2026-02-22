@@ -10,13 +10,15 @@ import time
 import httpx
 from fastmcp import FastMCP
 
+from clr_macvendors_mcp.oui_db import build_db, list_brands, search_by_brand
+
 API_BASE = "https://api.macvendors.com"
 
 mcp = FastMCP("MAC Vendors")
 _http: httpx.Client | None = None
 _last_request: float = 0.0
 
-WRITE_TOOLS: list[str] = []
+WRITE_TOOLS: list[str] = ["update_oui_database"]
 
 
 def _rate_limited_get(url: str) -> httpx.Response:
@@ -112,6 +114,74 @@ def macvendors_bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
             )
 
     return results
+
+
+@mcp.tool
+def search_brand_prefixes(brand: str) -> dict:
+    """Search the IEEE OUI database for MAC prefixes belonging to a brand.
+
+    Looks up all registered MAC address prefixes (OUI assignments) for a
+    given manufacturer or organization name.  Uses fuzzy substring matching
+    so partial names work (e.g. ``"Cisco"`` matches ``"Cisco Systems, Inc"``).
+
+    The local OUI database is automatically initialised on first use by
+    downloading IEEE CSV files (~10 seconds).
+
+    Args:
+        brand: Organization or manufacturer name to search for
+            (e.g. ``"Cisco"``, ``"Nokia"``, ``"Dell"``).
+
+    Returns:
+        A dictionary with ``brand`` (the query), ``count`` (number of
+        matching prefixes), and ``prefixes`` (list of dicts each with
+        ``prefix``, ``registry``, ``organization``, and ``country``).
+    """
+    results = search_by_brand(brand)
+    return {"brand": brand, "count": len(results), "prefixes": results}
+
+
+@mcp.tool
+def list_oui_brands(query: str | None = None) -> dict:
+    """List organizations (brands) in the IEEE OUI database.
+
+    Without a query, returns the top 100 organizations ranked by number of
+    registered MAC prefixes.  With a query, filters organizations by
+    case-insensitive substring match.
+
+    The local OUI database is automatically initialised on first use by
+    downloading IEEE CSV files (~10 seconds).
+
+    Args:
+        query: Optional substring to filter organization names
+            (e.g. ``"micro"`` matches ``"Microsoft"``).  When ``None``,
+            returns the top 100 by prefix count.
+
+    Returns:
+        A dictionary with ``query`` (the filter used), ``count`` (number
+        of matching organizations), and ``brands`` (list of dicts each
+        with ``organization``, ``country``, and ``prefix_count``).
+    """
+    results = list_brands(query)
+    return {"query": query, "count": len(results), "brands": results}
+
+
+@mcp.tool
+def update_oui_database() -> dict:
+    """Download fresh IEEE OUI data and rebuild the local database.
+
+    Fetches the latest MA-L, MA-M, MA-S, IAB, and CID registries from
+    IEEE and rebuilds the local SQLite database.  Takes approximately
+    10 seconds depending on network speed.
+
+    This is a write operation: it modifies the local cache at
+    ``~/.cache/clr-macvendors-mcp/oui.db``.
+
+    Returns:
+        A dictionary with ``status`` (``"updated"``) and ``path``
+        (filesystem path to the rebuilt database).
+    """
+    path = build_db()
+    return {"status": "updated", "path": str(path)}
 
 
 def main() -> None:
