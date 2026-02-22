@@ -1,3 +1,3 @@
-"""MAC Vendors MCP Server - MAC address vendor lookups via macvendors.com."""
+"""MAC Vendors MCP Server - MAC address vendor lookups and brand prefix search."""
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

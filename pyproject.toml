@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clr-macvendors-mcp"
-version = "1.0.0"
-description = "An MCP server for MAC address vendor lookups"
+version = "1.1.0"
+description = "An MCP server for MAC address vendor lookups and brand prefix search"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{name = "clearminds"}]
