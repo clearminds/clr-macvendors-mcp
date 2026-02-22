@@ -12,10 +12,12 @@ import httpx
 from fastmcp import FastMCP
 
 from clr_macvendors_mcp.oui_db import build_db, list_brands, search_by_brand
+from clr_macvendors_mcp.middleware import ToolValidationMiddleware
 
 API_BASE = "https://api.macvendors.com"
 
 mcp = FastMCP("MAC Vendors")
+mcp.add_middleware(ToolValidationMiddleware())
 _http: httpx.Client | None = None
 _last_request: float = 0.0
 
