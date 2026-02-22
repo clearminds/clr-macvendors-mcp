@@ -91,14 +91,12 @@ def _extract_country(address: str) -> str | None:
     """
     if not address:
         return None
-    # Split on whitespace and commas, strip empties
-    tokens = [t.strip() for t in address.replace(",", " ").split() if t.strip()]
-    if not tokens:
+    tokens = address.strip().split()
+    if len(tokens) < 2:
         return None
-    # Walk backwards looking for a 2-letter alpha token
-    for token in reversed(tokens):
-        if len(token) == 2 and token.isalpha():
-            return token.upper()
+    candidate = tokens[-2]
+    if len(candidate) == 2 and candidate.isalpha():
+        return candidate.upper()
     return None
 
 
@@ -125,9 +123,9 @@ def build_db() -> Path:
 
     conn = sqlite3.connect(str(tmp_path))
     try:
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.execute(_CREATE_TABLE)
         conn.execute(_CREATE_INDEX)
-        conn.execute("PRAGMA journal_mode=WAL")
 
         total = 0
         with httpx.Client(timeout=60.0, follow_redirects=True) as client:
@@ -159,13 +157,16 @@ def build_db() -> Path:
 
         conn.commit()
         logger.info("Total OUI entries: %d", total)
-    finally:
+    except Exception:
         conn.close()
-
-    # Atomic replace
-    os.replace(str(tmp_path), str(DB_PATH))
-    logger.info("OUI database written to %s", DB_PATH)
-    return DB_PATH
+        tmp_path.unlink(missing_ok=True)
+        raise
+    else:
+        conn.close()
+        # Atomic replace
+        os.replace(str(tmp_path), str(DB_PATH))
+        logger.info("OUI database written to %s", DB_PATH)
+        return DB_PATH
 
 
 def _ensure_db() -> Path:
@@ -180,7 +181,7 @@ def _ensure_db() -> Path:
     return DB_PATH
 
 
-def search_by_brand(brand: str) -> list[dict]:
+def search_by_brand(brand: str, limit: int = 500) -> list[dict]:
     """Search the OUI table for prefixes belonging to a brand/organization.
 
     Performs a case-insensitive ``LIKE %%brand%%`` search against the
@@ -189,6 +190,7 @@ def search_by_brand(brand: str) -> list[dict]:
     Args:
         brand: Organization name or substring to search for
             (e.g. ``"Cisco"``, ``"Nokia"``).
+        limit: Maximum number of results to return (default 500).
 
     Returns:
         A list of dicts, each with keys ``prefix``, ``registry``,
@@ -201,8 +203,9 @@ def search_by_brand(brand: str) -> list[dict]:
         cursor = conn.execute(
             "SELECT prefix, registry, organization, country "
             "FROM oui WHERE organization LIKE ? COLLATE NOCASE "
-            "ORDER BY organization, prefix",
-            (f"%{brand}%",),
+            "ORDER BY organization, prefix "
+            "LIMIT ?",
+            (f"%{brand}%", limit),
         )
         return [dict(row) for row in cursor.fetchall()]
     finally:
