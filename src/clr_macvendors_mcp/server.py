@@ -187,6 +187,20 @@ def update_oui_database() -> dict:
     return {"status": "updated", "path": str(path)}
 
 
+def init_composite() -> FastMCP:
+    """Initialize for composite mounting. Returns the FastMCP instance."""
+    global _http
+
+    _http = httpx.Client(timeout=10.0)
+
+    read_only = os.environ.get("MACVENDORS_READ_ONLY", "").lower() in ("1", "true", "yes")
+    if read_only and WRITE_TOOLS:
+        for name in WRITE_TOOLS:
+            mcp.remove_tool(name)
+
+    return mcp
+
+
 def main() -> None:
     """Main entry point for the MAC Vendors MCP server."""
     global _http
