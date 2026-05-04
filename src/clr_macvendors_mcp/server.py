@@ -24,9 +24,7 @@ _last_request: float = 0.0
 # Imported here (not at the top) on purpose: annotations.py needs ``mcp`` from
 # this module, so importing it before the ``mcp = FastMCP(...)`` line above
 # would be a circular import. Do not move.
-from clr_macvendors_mcp.annotations import read_tool, write_tool  # noqa: E402
-
-WRITE_TOOLS: list[str] = ["update_oui_database"]
+from clr_macvendors_mcp.annotations import read_tool, remove_non_read_tools, write_tool  # noqa: E402
 
 
 def _rate_limited_get(url: str) -> httpx.Response:
@@ -242,10 +240,9 @@ def main() -> None:
     _http = httpx.Client(timeout=10.0)
 
     read_only = args.read_only or os.environ.get("MACVENDORS_READ_ONLY", "").lower() in ("1", "true", "yes")
-    if read_only and WRITE_TOOLS:
-        for name in WRITE_TOOLS:
-            mcp.remove_tool(name)
-        logger.info("Read-only mode: %d write tools removed", len(WRITE_TOOLS))
+    if read_only:
+        removed = remove_non_read_tools(mcp)
+        logger.info("Read-only mode: %d non-read tools removed", removed)
 
     try:
         if args.transport == "stdio":
