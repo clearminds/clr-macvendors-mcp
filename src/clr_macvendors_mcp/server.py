@@ -21,7 +21,10 @@ mcp.add_middleware(ToolValidationMiddleware())
 _http: httpx.Client | None = None
 _last_request: float = 0.0
 
-WRITE_TOOLS: list[str] = ["update_oui_database"]
+# Imported here (not at the top) on purpose: annotations.py needs ``mcp`` from
+# this module, so importing it before the ``mcp = FastMCP(...)`` line above
+# would be a circular import. Do not move.
+from clr_macvendors_mcp.annotations import read_tool, remove_non_read_tools, write_tool  # noqa: E402
 
 
 def _rate_limited_get(url: str) -> httpx.Response:
@@ -44,7 +47,7 @@ def _normalize_mac(mac: str) -> str:
     return ":".join(raw[i : i + 2] for i in range(0, len(raw), 2))
 
 
-@mcp.tool
+@read_tool
 def macvendors_lookup(mac: str) -> dict[str, str]:
     """Look up the manufacturer/vendor of a device by its MAC address.
 
@@ -80,7 +83,7 @@ def macvendors_lookup(mac: str) -> dict[str, str]:
     return {"mac": normalized, "vendor": vendor, "found": True}
 
 
-@mcp.tool
+@read_tool
 def macvendors_bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
     """Look up vendors for multiple MAC addresses.
 
@@ -119,7 +122,7 @@ def macvendors_bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
     return results
 
 
-@mcp.tool
+@read_tool
 def search_brand_prefixes(brand: str) -> dict:
     """Search the IEEE OUI database for MAC prefixes belonging to a brand.
 
@@ -143,7 +146,7 @@ def search_brand_prefixes(brand: str) -> dict:
     return {"brand": brand, "count": len(results), "prefixes": results}
 
 
-@mcp.tool
+@read_tool
 def list_oui_brands(query: str | None = None) -> dict:
     """List organizations (brands) in the IEEE OUI database.
 
@@ -168,7 +171,7 @@ def list_oui_brands(query: str | None = None) -> dict:
     return {"query": query, "count": len(results), "brands": results}
 
 
-@mcp.tool
+@write_tool
 def update_oui_database() -> dict:
     """Download fresh IEEE OUI data and rebuild the local database.
 
@@ -251,10 +254,9 @@ def main() -> None:
     _http = httpx.Client(timeout=10.0)
 
     read_only = args.read_only or os.environ.get("MACVENDORS_READ_ONLY", "").lower() in ("1", "true", "yes")
-    if read_only and WRITE_TOOLS:
-        for name in WRITE_TOOLS:
-            mcp.remove_tool(name)
-        logger.info("Read-only mode: %d write tools removed", len(WRITE_TOOLS))
+    if read_only:
+        removed = remove_non_read_tools(mcp)
+        logger.info("Read-only mode: %d non-read tools removed", removed)
 
     try:
         if args.transport == "stdio":
