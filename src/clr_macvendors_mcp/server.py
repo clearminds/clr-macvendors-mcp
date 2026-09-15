@@ -48,7 +48,7 @@ def _normalize_mac(mac: str) -> str:
 
 
 @read_tool
-def macvendors_lookup(mac: str) -> dict[str, str]:
+def lookup(mac: str) -> dict[str, str]:
     """Look up the manufacturer/vendor of a device by its MAC address.
 
     Uses the macvendors.com API to identify the OUI (Organizationally Unique
@@ -84,7 +84,7 @@ def macvendors_lookup(mac: str) -> dict[str, str]:
 
 
 @read_tool
-def macvendors_bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
+def bulk_lookup(macs: list[str]) -> list[dict[str, str]]:
     """Look up vendors for multiple MAC addresses.
 
     Rate-limited to 1 request/second per macvendors.com free tier.
